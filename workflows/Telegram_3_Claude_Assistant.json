@@ -1,0 +1,660 @@
+{
+  "updatedAt": "2026-09-07T19:14:23.244Z",
+  "createdAt": "2026-09-07T12:42:41.861Z",
+  "id": "CqxH14VNN35cDGTt",
+  "name": "Telegram 3 Claude Assistant",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "tg-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1400,
+        0
+      ],
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "ZN3TA5Rr3c309TbL",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "id": "prepare",
+      "name": "Prepare Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1180,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat",
+              "name": "chat_id",
+              "value": "={{$json.message.chat.id}}",
+              "type": "number"
+            },
+            {
+              "id": "user",
+              "name": "user_id",
+              "value": "={{$json.message.from.id}}",
+              "type": "number"
+            },
+            {
+              "id": "text",
+              "name": "user_text",
+              "value": "={{$json.message.text || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "session",
+              "name": "session_key",
+              "value": "={{String($json.message.chat.id)}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "history",
+      "name": "Get Conversation History",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        -220
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "conversations",
+        "limit": 30,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_key",
+              "condition": "eq",
+              "keyValue": "={{$node['Prepare Input'].json.session_key}}"
+            }
+          ]
+        },
+        "options": {
+          "alwaysOutputData": true
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "VTlk7ZqsgA8HfKQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "id": "history-format",
+      "name": "Format History",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        -220
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r.role && typeof r.content === 'string');\nrows.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));\nreturn [{json:{history:rows.slice(-30).map(r => ({role:r.role,content:r.content}))}}];"
+      }
+    },
+    {
+      "id": "embedding",
+      "name": "Create Query Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -920,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"input\":$node['Prepare Input'].json.user_text,\"model\":\"text-embedding-3-small\"}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4U8BHxx4KVs0sXjj",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "rpc",
+      "name": "Match Solutions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -680,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://lylithbecmmitspgeddh.supabase.co/rest/v1/rpc/match_solutions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"query_embedding\":$json.data[0].embedding,\"match_count\":10,\"match_threshold\":0.2}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4U8BHxx4KVs0sXjj",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "solutions-format",
+      "name": "Format Solutions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r.problem || r.solution);\nreturn [{json:{solutions:rows.map(r => ({problem:r.problem,solution:r.solution,tags:r.tags,similarity:r.similarity ?? r.match_score}))}}];"
+      }
+    },
+    {
+      "id": "merge",
+      "name": "Merge History and Solutions",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -220,
+        0
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      }
+    },
+    {
+      "id": "context",
+      "name": "Build Claude Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const history = $json.history ?? [];\nconst solutions = $json.solutions ?? [];\nconst input = $('Prepare Input').first().json;\nconst ctx = 'History: ' + JSON.stringify(history) + ' Solutions: ' + JSON.stringify(solutions);\nreturn [{json:{...input,context:ctx}}];"
+      }
+    },
+    {
+      "id": "claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: 'You are a Telegram assistant for a developer. You have a knowledge base of past solutions. Use relevant solutions when applicable and adapt them to the question, not verbatim. If none are relevant, answer in your own words and do not invent project details. Be concise, answer in the user language, and ask before irreversible actions.', messages: [{ role: 'user', content: $json.context + ' Current user message: ' + $json.user_text }] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4U8BHxx4KVs0sXjj",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "extract",
+      "name": "Extract Claude Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        0
+      ],
+      "parameters": {
+        "jsCode": "if ($json.error) return [{json:{ok:false,error:$json.error.message || JSON.stringify($json.error)}}];\nconst block = ($json.content || []).find(b => b.type === 'text' && typeof b.text === 'string');\nreturn block ? [{json:{ok:true,answer:block.text}}] : [{json:{ok:false,error:'Claude returned no text block'}}];"
+      }
+    },
+    {
+      "id": "if",
+      "name": "Claude Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        680,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "send-error",
+      "name": "Send Claude Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        180
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$('Prepare Input').first().json.chat_id}}",
+        "text": "Ошибка Claude: {{$json.error}}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "ZN3TA5Rr3c309TbL",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "id": "send",
+      "name": "Send Telegram Answer",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        -120
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$('Prepare Input').first().json.chat_id}}",
+        "text": "={{$json.answer}}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "ZN3TA5Rr3c309TbL",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "id": "save",
+      "name": "Save Dialogue",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -120
+      ],
+      "parameters": {
+        "operation": "insert",
+        "tableId": "conversations",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_key": "={{$('Prepare Input').first().json.session_key}}",
+            "role": "user",
+            "content": "={{$('Prepare Input').first().json.user_text}}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "VTlk7ZqsgA8HfKQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "id": "save-answer",
+      "name": "Save Assistant Answer",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        -120
+      ],
+      "parameters": {
+        "operation": "insert",
+        "tableId": "conversations",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_key": "={{$('Prepare Input').first().json.session_key}}",
+            "role": "assistant",
+            "content": "={{$('Extract Claude Text').first().json.answer}}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "VTlk7ZqsgA8HfKQ1",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Input": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation History",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Query Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation History": {
+      "main": [
+        [
+          {
+            "node": "Format History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format History": {
+      "main": [
+        [
+          {
+            "node": "Merge History and Solutions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Query Embedding": {
+      "main": [
+        [
+          {
+            "node": "Match Solutions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Solutions": {
+      "main": [
+        [
+          {
+            "node": "Format Solutions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Solutions": {
+      "main": [
+        [
+          {
+            "node": "Merge History and Solutions",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge History and Solutions": {
+      "main": [
+        [
+          {
+            "node": "Build Claude Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude Context": {
+      "main": [
+        [
+          {
+            "node": "Call Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Claude": {
+      "main": [
+        [
+          {
+            "node": "Extract Claude Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Claude Text": {
+      "main": [
+        [
+          {
+            "node": "Claude Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Success?": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Claude Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Answer": {
+      "main": [
+        [
+          {
+            "node": "Save Dialogue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Dialogue": {
+      "main": [
+        [
+          {
+            "node": "Save Assistant Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "8930ce48-5599-4f77-895d-84bb27e4f964",
+  "activeVersionId": null,
+  "versionCounter": 8,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-09-07T12:42:41.865Z",
+      "createdAt": "2026-09-07T12:42:41.865Z",
+      "role": "workflow:owner",
+      "workflowId": "CqxH14VNN35cDGTt",
+      "projectId": "hXnfTwrLdGKQpymf",
+      "project": {
+        "updatedAt": "2026-02-01T19:42:03.829Z",
+        "createdAt": "2026-02-01T19:41:00.630Z",
+        "id": "hXnfTwrLdGKQpymf",
+        "name": "Yelyzaveta Beskorsa <lizabeskorsa@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-01T19:41:00.631Z",
+            "createdAt": "2026-02-01T19:41:00.631Z",
+            "userId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+            "projectId": "hXnfTwrLdGKQpymf",
+            "user": {
+              "updatedAt": "2026-09-07T08:33:38.000Z",
+              "createdAt": "2026-02-01T19:40:59.391Z",
+              "id": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+              "email": "lizabeskorsa@gmail.com",
+              "firstName": "Yelyzaveta",
+              "lastName": "Beskorsa",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-01T19:42:18.278Z",
+                "personalization_survey_n8n_version": "2.4.8",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "google"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "TRzxyVmbr8Qxu0JY",
+                "userActivatedAt": 1788730073733
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-09-07",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
