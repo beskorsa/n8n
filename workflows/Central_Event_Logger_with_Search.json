@@ -1,0 +1,289 @@
+{
+  "updatedAt": "2026-09-14T16:32:41.550Z",
+  "createdAt": "2026-09-14T16:32:41.550Z",
+  "id": "gET4WZYVcKPelKMI",
+  "name": "Central Event Logger with Search",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Log Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        200
+      ],
+      "parameters": {
+        "path": "log-event",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "c12a28eb-9c7b-4d3b-9f49-51c82bdf597a"
+    },
+    {
+      "id": "search_webhook",
+      "name": "Search Events Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        400
+      ],
+      "parameters": {
+        "path": "search-events",
+        "httpMethod": "GET",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "a67e47ac-ce12-4b4b-8006-5d5fe5bb83ab"
+    },
+    {
+      "id": "format_log",
+      "name": "Format Log Entry",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        460,
+        200
+      ],
+      "parameters": {
+        "mode": "manual",
+        "fields": {
+          "values": [
+            {
+              "name": "timestamp",
+              "stringValue": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "service",
+              "stringValue": "={{ $json.body.service }}"
+            },
+            {
+              "name": "action",
+              "stringValue": "={{ $json.body.action }}"
+            },
+            {
+              "name": "user_id",
+              "stringValue": "={{ $json.body.user_id || 'system' }}"
+            },
+            {
+              "name": "details",
+              "stringValue": "={{ JSON.stringify($json.body.details || {}) }}"
+            },
+            {
+              "name": "status",
+              "stringValue": "={{ $json.body.status || 'success' }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets_log",
+      "name": "Append to Logs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        680,
+        200
+      ],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "event_logs"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "timestamp",
+            "service",
+            "action",
+            "user_id",
+            "details",
+            "status"
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets_search",
+      "name": "Search Logs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        460,
+        400
+      ],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "event_logs"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "service",
+              "lookupValue": "={{ $json.query.service }}"
+            },
+            {
+              "lookupColumn": "action",
+              "lookupValue": "={{ $json.query.action }}"
+            }
+          ]
+        },
+        "options": {
+          "rangeDefinition": "specifyRange",
+          "range": "A:F"
+        }
+      }
+    },
+    {
+      "id": "respond_search",
+      "name": "Return Search Results",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        400
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"results\": $json, \"count\": $json.length } }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Log Event Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Append to Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Events Webhook": {
+      "main": [
+        [
+          {
+            "node": "Search Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Logs": {
+      "main": [
+        [
+          {
+            "node": "Return Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "024fa4d5-3857-4127-93e8-c6fd070703aa",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-09-14T16:32:41.556Z",
+      "createdAt": "2026-09-14T16:32:41.556Z",
+      "role": "workflow:owner",
+      "workflowId": "gET4WZYVcKPelKMI",
+      "projectId": "hXnfTwrLdGKQpymf",
+      "project": {
+        "updatedAt": "2026-02-01T19:42:03.829Z",
+        "createdAt": "2026-02-01T19:41:00.630Z",
+        "id": "hXnfTwrLdGKQpymf",
+        "name": "Yelyzaveta Beskorsa <lizabeskorsa@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-01T19:41:00.631Z",
+            "createdAt": "2026-02-01T19:41:00.631Z",
+            "userId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+            "projectId": "hXnfTwrLdGKQpymf",
+            "user": {
+              "updatedAt": "2026-09-14T16:15:02.000Z",
+              "createdAt": "2026-02-01T19:40:59.391Z",
+              "id": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+              "email": "lizabeskorsa@gmail.com",
+              "firstName": "Yelyzaveta",
+              "lastName": "Beskorsa",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-01T19:42:18.278Z",
+                "personalization_survey_n8n_version": "2.4.8",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "google"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "TRzxyVmbr8Qxu0JY",
+                "userActivatedAt": 1788730073733
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-09-14",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
