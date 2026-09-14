@@ -1,0 +1,433 @@
+{
+  "updatedAt": "2026-09-14T16:32:00.488Z",
+  "createdAt": "2026-09-14T16:32:00.488Z",
+  "id": "NKIGxWq8RrGja6CL",
+  "name": "GitHub to Google Sheets Sync",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Schedule Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "get_commits",
+      "name": "Get Commits",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        200
+      ],
+      "parameters": {
+        "resource": "repository",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "owner-name"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "repo-name"
+        }
+      }
+    },
+    {
+      "id": "get_issues",
+      "name": "Get Issues",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "resource": "repository",
+        "operation": "getIssues",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "owner-name"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "repo-name"
+        },
+        "getRepositoryIssuesFilters": {}
+      }
+    },
+    {
+      "id": "get_prs",
+      "name": "Get Pull Requests",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        400
+      ],
+      "parameters": {
+        "resource": "repository",
+        "operation": "getPullRequests",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "owner-name"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "repo-name"
+        }
+      }
+    },
+    {
+      "id": "format_commits",
+      "name": "Format Commits",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        200
+      ],
+      "parameters": {
+        "mode": "manual",
+        "fields": {
+          "values": [
+            {
+              "name": "Type",
+              "stringValue": "Commit"
+            },
+            {
+              "name": "Title",
+              "stringValue": "={{ $json.commit.message }}"
+            },
+            {
+              "name": "Author",
+              "stringValue": "={{ $json.commit.author.name }}"
+            },
+            {
+              "name": "Date",
+              "stringValue": "={{ $json.commit.author.date }}"
+            },
+            {
+              "name": "URL",
+              "stringValue": "={{ $json.html_url }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "format_issues",
+      "name": "Format Issues",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "fields": {
+          "values": [
+            {
+              "name": "Type",
+              "stringValue": "Issue"
+            },
+            {
+              "name": "Title",
+              "stringValue": "={{ $json.title }}"
+            },
+            {
+              "name": "Author",
+              "stringValue": "={{ $json.user.login }}"
+            },
+            {
+              "name": "Date",
+              "stringValue": "={{ $json.created_at }}"
+            },
+            {
+              "name": "URL",
+              "stringValue": "={{ $json.html_url }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "format_prs",
+      "name": "Format PRs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        400
+      ],
+      "parameters": {
+        "mode": "manual",
+        "fields": {
+          "values": [
+            {
+              "name": "Type",
+              "stringValue": "Pull Request"
+            },
+            {
+              "name": "Title",
+              "stringValue": "={{ $json.title }}"
+            },
+            {
+              "name": "Author",
+              "stringValue": "={{ $json.user.login }}"
+            },
+            {
+              "name": "Date",
+              "stringValue": "={{ $json.created_at }}"
+            },
+            {
+              "name": "URL",
+              "stringValue": "={{ $json.html_url }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "merge",
+      "name": "Merge All",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Type",
+            "Title",
+            "Author",
+            "Date",
+            "URL"
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Daily": {
+      "main": [
+        [
+          {
+            "node": "Get Commits",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Issues",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Pull Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Commits": {
+      "main": [
+        [
+          {
+            "node": "Format Commits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Issues": {
+      "main": [
+        [
+          {
+            "node": "Format Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pull Requests": {
+      "main": [
+        [
+          {
+            "node": "Format PRs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Commits": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Issues": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Format PRs": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge All": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "7d44cb45-244d-4b29-9a98-31f23ab3544f",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-09-14T16:32:00.494Z",
+      "createdAt": "2026-09-14T16:32:00.494Z",
+      "role": "workflow:owner",
+      "workflowId": "NKIGxWq8RrGja6CL",
+      "projectId": "hXnfTwrLdGKQpymf",
+      "project": {
+        "updatedAt": "2026-02-01T19:42:03.829Z",
+        "createdAt": "2026-02-01T19:41:00.630Z",
+        "id": "hXnfTwrLdGKQpymf",
+        "name": "Yelyzaveta Beskorsa <lizabeskorsa@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-01T19:41:00.631Z",
+            "createdAt": "2026-02-01T19:41:00.631Z",
+            "userId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+            "projectId": "hXnfTwrLdGKQpymf",
+            "user": {
+              "updatedAt": "2026-09-14T16:15:02.000Z",
+              "createdAt": "2026-02-01T19:40:59.391Z",
+              "id": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+              "email": "lizabeskorsa@gmail.com",
+              "firstName": "Yelyzaveta",
+              "lastName": "Beskorsa",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-01T19:42:18.278Z",
+                "personalization_survey_n8n_version": "2.4.8",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "google"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "TRzxyVmbr8Qxu0JY",
+                "userActivatedAt": 1788730073733
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-09-14",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
