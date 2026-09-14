@@ -1,0 +1,237 @@
+{
+  "updatedAt": "2026-09-14T16:32:28.894Z",
+  "createdAt": "2026-09-14T16:32:28.894Z",
+  "id": "BxIhpqU0uKCdhTIC",
+  "name": "RSS Feed to Telegram Channel",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Schedule Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rss",
+      "name": "Fetch RSS Feed",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "url": "https://news.ycombinator.com/rss"
+      }
+    },
+    {
+      "id": "filter",
+      "name": "Filter by Keywords",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          },
+          "combinator": "or",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "AI|automation|n8n",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "AI|automation|n8n",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "format",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "fields": {
+          "values": [
+            {
+              "name": "message",
+              "stringValue": "🔥 <b>{{ $json.title }}</b>\\n\\n{{ $json.contentSnippet || $json.content.substring(0, 200) }}...\\n\\n🔗 <a href='{{ $json.link }}'>Read more</a>"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "telegram",
+      "name": "Send to Telegram Channel",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "@your_channel_name",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Fetch RSS Feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch RSS Feed": {
+      "main": [
+        [
+          {
+            "node": "Filter by Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter by Keywords": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "a1dfd911-469a-4031-940f-12a0febb7536",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-09-14T16:32:28.897Z",
+      "createdAt": "2026-09-14T16:32:28.897Z",
+      "role": "workflow:owner",
+      "workflowId": "BxIhpqU0uKCdhTIC",
+      "projectId": "hXnfTwrLdGKQpymf",
+      "project": {
+        "updatedAt": "2026-02-01T19:42:03.829Z",
+        "createdAt": "2026-02-01T19:41:00.630Z",
+        "id": "hXnfTwrLdGKQpymf",
+        "name": "Yelyzaveta Beskorsa <lizabeskorsa@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-01T19:41:00.631Z",
+            "createdAt": "2026-02-01T19:41:00.631Z",
+            "userId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+            "projectId": "hXnfTwrLdGKQpymf",
+            "user": {
+              "updatedAt": "2026-09-14T16:15:02.000Z",
+              "createdAt": "2026-02-01T19:40:59.391Z",
+              "id": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+              "email": "lizabeskorsa@gmail.com",
+              "firstName": "Yelyzaveta",
+              "lastName": "Beskorsa",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-01T19:42:18.278Z",
+                "personalization_survey_n8n_version": "2.4.8",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "google"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "TRzxyVmbr8Qxu0JY",
+                "userActivatedAt": 1788730073733
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-09-14",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
