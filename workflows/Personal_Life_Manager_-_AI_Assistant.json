@@ -1,0 +1,217 @@
+{
+  "updatedAt": "2026-09-14T16:31:20.974Z",
+  "createdAt": "2026-09-14T16:31:20.974Z",
+  "id": "0ttkgjBawIiKiESd",
+  "name": "Personal Life Manager - AI Assistant",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "webhookId": "1114c54d-3cce-4835-9abf-8154c52b1e3d"
+    },
+    {
+      "id": "agent",
+      "name": "AI Personal Assistant",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "prompt": "# Personal Life Manager Assistant\n\nYou are an intelligent personal assistant helping the user manage their schedule, tasks, and reminders.\n\n## Your Tools\n- **Google Calendar**: check availability, create/update/delete events\n- **Google Tasks**: create/update/complete tasks, manage to-do lists\n\n## Instructions\n1. Always check the user's calendar before suggesting times for new events\n2. When creating events, ask for: title, start time, end time (optional: location, description)\n3. For tasks: ask for title, due date (optional: notes)\n4. Use natural language to confirm actions before executing\n5. Current date/time: {{ $now.toISO() }}\n\n## Tone\nFriendly, efficient, proactive. Suggest better time slots if conflicts exist.",
+        "options": {
+          "systemMessage": "={{ $json.prompt }}"
+        }
+      }
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI GPT-4o",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        160
+      ],
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.7
+        }
+      }
+    },
+    {
+      "id": "memory",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        680,
+        240
+      ],
+      "parameters": {
+        "contextWindowLength": 5
+      }
+    },
+    {
+      "id": "calendar_tool",
+      "name": "Google Calendar Tool",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1,
+      "position": [
+        680,
+        320
+      ],
+      "parameters": {
+        "resource": "event",
+        "operation": "getMany",
+        "toolDescription": "Search and manage calendar events: check availability, create/update/delete meetings and appointments"
+      }
+    },
+    {
+      "id": "tasks_tool",
+      "name": "Google Tasks Tool",
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        680,
+        400
+      ],
+      "parameters": {
+        "resource": "task",
+        "operation": "getAll",
+        "toolDescription": "Manage to-do lists: create, update, complete, and list tasks"
+      }
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Personal Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Personal Assistant": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "OpenAI GPT-4o",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "Conversation Memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "Google Calendar Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Tasks Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "ab74661d-4f5c-4625-b566-d4a317bc7ca3",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-09-14T16:31:20.985Z",
+      "createdAt": "2026-09-14T16:31:20.985Z",
+      "role": "workflow:owner",
+      "workflowId": "0ttkgjBawIiKiESd",
+      "projectId": "hXnfTwrLdGKQpymf",
+      "project": {
+        "updatedAt": "2026-02-01T19:42:03.829Z",
+        "createdAt": "2026-02-01T19:41:00.630Z",
+        "id": "hXnfTwrLdGKQpymf",
+        "name": "Yelyzaveta Beskorsa <lizabeskorsa@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-01T19:41:00.631Z",
+            "createdAt": "2026-02-01T19:41:00.631Z",
+            "userId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+            "projectId": "hXnfTwrLdGKQpymf",
+            "user": {
+              "updatedAt": "2026-09-14T16:15:02.000Z",
+              "createdAt": "2026-02-01T19:40:59.391Z",
+              "id": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+              "email": "lizabeskorsa@gmail.com",
+              "firstName": "Yelyzaveta",
+              "lastName": "Beskorsa",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-01T19:42:18.278Z",
+                "personalization_survey_n8n_version": "2.4.8",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "google"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "TRzxyVmbr8Qxu0JY",
+                "userActivatedAt": 1788730073733
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-09-14",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
