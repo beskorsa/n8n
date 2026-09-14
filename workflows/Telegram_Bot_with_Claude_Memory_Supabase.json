@@ -1,0 +1,228 @@
+{
+  "updatedAt": "2026-09-14T16:32:53.722Z",
+  "createdAt": "2026-09-14T16:32:53.722Z",
+  "id": "IT2UH08623xPHkh1",
+  "name": "Telegram Bot with Claude + Memory (Supabase)",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      }
+    },
+    {
+      "id": "typing",
+      "name": "Show Typing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "resource": "chat",
+        "operation": "sendChatAction",
+        "chatId": "={{ $json.message.chat.id }}",
+        "action": "typing"
+      }
+    },
+    {
+      "id": "agent",
+      "name": "Claude AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "prompt": "You are a helpful AI assistant. Remember context from previous messages in this conversation.",
+        "options": {
+          "systemMessage": "={{ $json.prompt }}"
+        }
+      }
+    },
+    {
+      "id": "claude",
+      "name": "Claude 3.7 Sonnet",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        180
+      ],
+      "parameters": {
+        "model": "claude-3-7-sonnet-20250219",
+        "options": {
+          "temperature": 0.7
+        }
+      }
+    },
+    {
+      "id": "memory",
+      "name": "Supabase Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        260
+      ],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "tableName": "telegram_chat_memory"
+      }
+    },
+    {
+      "id": "send",
+      "name": "Send Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        380
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Show Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show Typing": {
+      "main": [
+        [
+          {
+            "node": "Claude AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_languageModel": [
+        [
+          {
+            "node": "Claude 3.7 Sonnet",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "Supabase Chat Memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "c8932c7b-bf19-470c-91ab-f6263584667d",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-09-14T16:32:53.726Z",
+      "createdAt": "2026-09-14T16:32:53.726Z",
+      "role": "workflow:owner",
+      "workflowId": "IT2UH08623xPHkh1",
+      "projectId": "hXnfTwrLdGKQpymf",
+      "project": {
+        "updatedAt": "2026-02-01T19:42:03.829Z",
+        "createdAt": "2026-02-01T19:41:00.630Z",
+        "id": "hXnfTwrLdGKQpymf",
+        "name": "Yelyzaveta Beskorsa <lizabeskorsa@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-01T19:41:00.631Z",
+            "createdAt": "2026-02-01T19:41:00.631Z",
+            "userId": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+            "projectId": "hXnfTwrLdGKQpymf",
+            "user": {
+              "updatedAt": "2026-09-14T16:15:02.000Z",
+              "createdAt": "2026-02-01T19:40:59.391Z",
+              "id": "1e26fbc2-685e-4fba-9668-6aa601b3fd27",
+              "email": "lizabeskorsa@gmail.com",
+              "firstName": "Yelyzaveta",
+              "lastName": "Beskorsa",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-01T19:42:18.278Z",
+                "personalization_survey_n8n_version": "2.4.8",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "google"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "TRzxyVmbr8Qxu0JY",
+                "userActivatedAt": 1788730073733
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-09-14",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
